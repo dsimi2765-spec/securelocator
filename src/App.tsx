@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { StepNumber, AuthProvider, Device, AuditLog, LegalModalType, ThemeColor } from './types';
 import { INITIAL_DEVICES, INITIAL_AUDIT_LOGS } from './data/mockData';
 import { Header } from './components/Header';
@@ -209,6 +210,9 @@ export default function App() {
 
       {/* Legal & Policy Modal */}
       <LegalModal type={legalModal} onClose={() => setLegalModal(null)} />
+
+      {/* Vercel Speed Insights */}
+      <SpeedInsights />
     </div>
   );
 }
