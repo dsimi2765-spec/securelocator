@@ -31,10 +31,20 @@ import {
   Clock,
   Printer,
   Siren,
+  Sparkles,
+  Bot,
+  Footprints,
+  Globe,
+  PhoneCall,
+  MessageSquare,
 } from 'lucide-react';
 import { playLocatorSound } from '../utils/audio';
 import { AddDeviceModal } from './AddDeviceModal';
 import { PoliceReportModal } from './PoliceReportModal';
+import { GlobalDeviceSelector } from './GlobalDeviceSelector';
+import { AiActivityTrajectory } from './AiActivityTrajectory';
+import { CrimeSceneLocatorPanel } from './CrimeSceneLocatorPanel';
+import { AiSecurityChatModal } from './AiSecurityChatModal';
 
 interface Step3DashboardProps {
   devices: Device[];
@@ -59,7 +69,7 @@ export const Step3Dashboard: React.FC<Step3DashboardProps> = ({
   authenticatedProvider,
   themeColor = 'blue',
 }) => {
-  const [activeTab, setActiveTab] = useState<'live' | 'history' | 'geofence' | 'cellular'>('live');
+  const [activeTab, setActiveTab] = useState<'live' | 'ai-safety' | 'history' | 'geofence' | 'cellular'>('live');
 
   const [isPlayingSound, setIsPlayingSound] = useState(false);
   const [isSosStrobeActive, setIsSosStrobeActive] = useState(false);
@@ -71,6 +81,7 @@ export const Step3Dashboard: React.FC<Step3DashboardProps> = ({
   const [showLostModeModal, setShowLostModeModal] = useState(false);
   const [showAuditModal, setShowAuditModal] = useState(false);
   const [showWipeModal, setShowWipeModal] = useState(false);
+  const [showAiChatModal, setShowAiChatModal] = useState(false);
 
   // Lost mode form state
   const [customMessage, setCustomMessage] = useState(
@@ -224,35 +235,21 @@ export const Step3Dashboard: React.FC<Step3DashboardProps> = ({
           </div>
         </div>
 
-        {/* Device Switcher and Add Device Button */}
+        {/* Device Switcher and Add Device Button + AI Chat Launcher */}
         <div className="flex items-center gap-2">
-          <div className="relative flex-1 sm:w-auto">
-            <label className="text-[11px] font-semibold text-[#64748b] dark:text-[#bec6e0] block mb-1">
-              Active Device:
-            </label>
-            <div className="relative">
-              <select
-                value={selectedDevice.id}
-                onChange={(e) => {
-                  const target = devices.find((d) => d.id === e.target.value);
-                  if (target) onSelectDevice(target);
-                }}
-                className="appearance-none w-full sm:w-[220px] bg-white dark:bg-[#191c1e] border border-[#c3c6d7] dark:border-[#434655] rounded-xl px-3.5 py-2 pr-8 text-xs font-semibold text-[#1e293b] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#2563eb] cursor-pointer shadow-2xs truncate"
-              >
-                {devices.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name} ({d.id})
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-4 h-4 text-[#64748b] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
-          </div>
+          <button
+            onClick={() => setShowAiChatModal(true)}
+            className="p-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl shadow-2xs font-semibold text-xs flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
+            title="Open Gemini AI Personal Safety Chat"
+          >
+            <Sparkles className="w-4 h-4 text-amber-300 animate-spin-slow" />
+            <span className="hidden sm:inline">AI Safety Advisor</span>
+          </button>
 
           <div className="flex items-end">
             <button
               onClick={() => setShowAddDeviceModal(true)}
-              className={`mt-5 p-2 rounded-xl shadow-2xs font-semibold text-xs flex items-center gap-1 transition-colors cursor-pointer shrink-0 ${theme.buttonPrimary}`}
+              className={`p-2 rounded-xl shadow-2xs font-semibold text-xs flex items-center gap-1 transition-colors cursor-pointer shrink-0 ${theme.buttonPrimary}`}
               title="Add New Tracked Device"
             >
               <Plus className="w-4 h-4" />
@@ -261,6 +258,14 @@ export const Step3Dashboard: React.FC<Step3DashboardProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Global Device & Target Selector Panel */}
+      <GlobalDeviceSelector
+        devices={devices}
+        selectedDevice={selectedDevice}
+        onSelectDevice={onSelectDevice}
+        themeColor={themeColor}
+      />
 
       {/* Ping Notification Alert Toast */}
       {pingNotification && (
@@ -307,6 +312,7 @@ export const Step3Dashboard: React.FC<Step3DashboardProps> = ({
       <div className="flex border-b border-[#e2e8f0] dark:border-[#2d3133] gap-1 overflow-x-auto no-scrollbar">
         {[
           { id: 'live', label: 'GPS Radar & Live', icon: Navigation },
+          { id: 'ai-safety', label: 'AI Safety & Crime Unit', icon: Sparkles },
           { id: 'history', label: 'Location Timeline', icon: Clock },
           { id: 'geofence', label: 'Geofence Safe Zones', icon: Shield },
           { id: 'cellular', label: 'Triangulation & Cell Tower', icon: RadioTower },
@@ -566,6 +572,76 @@ export const Step3Dashboard: React.FC<Step3DashboardProps> = ({
               <span>{selectedDevice.status === 'Lost Mode' ? 'Edit Lost Mode' : 'Enable Lost Mode'}</span>
             </button>
           </section>
+
+          {/* AI Gait Activity & Trajectory Forecast Panel */}
+          <AiActivityTrajectory device={selectedDevice} themeColor={themeColor} />
+
+          {/* Crime Scene Locator & Emergency Panic Panel */}
+          <CrimeSceneLocatorPanel
+            device={selectedDevice}
+            themeColor={themeColor}
+            onTogglePanicAlarm={(deviceId) => {
+              const target = devices.find((d) => d.id === deviceId);
+              if (target) {
+                target.status = target.status === 'EMERGENCY SOS' ? 'Active' : 'EMERGENCY SOS';
+                if (!target.panicAlarmState) {
+                  target.panicAlarmState = { isAlarmActive: true, decibelLevel: 92, audioWiretapActive: true };
+                } else {
+                  target.panicAlarmState.isAlarmActive = !target.panicAlarmState.isAlarmActive;
+                }
+                onSelectDevice({ ...target });
+              }
+            }}
+          />
+        </div>
+      )}
+
+      {/* TAB: DEDICATED AI SAFETY & CRIME SCENE UNIT */}
+      {activeTab === 'ai-safety' && (
+        <div className="flex flex-col gap-5 animate-in fade-in">
+          {/* AI Safety Hero Banner */}
+          <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-950 text-white rounded-2xl p-5 border border-blue-800/50 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="p-2 rounded-xl bg-blue-600/30 text-amber-300 border border-blue-400/40">
+                  <Sparkles className="w-5 h-5 animate-spin-slow" />
+                </span>
+                <h2 className="text-lg font-bold">Gemini 3.6 AI Safety & Law Enforcement Unit</h2>
+              </div>
+              <p className="text-xs text-blue-200 leading-relaxed max-w-xl">
+                Real-time AI behavioral motion analysis, predictive trajectory mapping, automated crime scene threat detection, and instant law enforcement dispatch integration.
+              </p>
+            </div>
+
+            <button
+              onClick={() => setShowAiChatModal(true)}
+              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md flex items-center gap-2 transition-all cursor-pointer shrink-0"
+            >
+              <MessageSquare className="w-4 h-4 text-amber-300" />
+              <span>Launch AI Tactical Safety Chat</span>
+            </button>
+          </div>
+
+          {/* Crime Scene Locator Panel */}
+          <CrimeSceneLocatorPanel
+            device={selectedDevice}
+            themeColor={themeColor}
+            onTogglePanicAlarm={(deviceId) => {
+              const target = devices.find((d) => d.id === deviceId);
+              if (target) {
+                target.status = target.status === 'EMERGENCY SOS' ? 'Active' : 'EMERGENCY SOS';
+                if (!target.panicAlarmState) {
+                  target.panicAlarmState = { isAlarmActive: true, decibelLevel: 92, audioWiretapActive: true };
+                } else {
+                  target.panicAlarmState.isAlarmActive = !target.panicAlarmState.isAlarmActive;
+                }
+                onSelectDevice({ ...target });
+              }
+            }}
+          />
+
+          {/* AI Motion & Trajectory Panel */}
+          <AiActivityTrajectory device={selectedDevice} themeColor={themeColor} />
         </div>
       )}
 
@@ -978,6 +1054,13 @@ export const Step3Dashboard: React.FC<Step3DashboardProps> = ({
           </div>
         </div>
       )}
+
+      {/* AI Tactical Security Chat Modal */}
+      <AiSecurityChatModal
+        isOpen={showAiChatModal}
+        onClose={() => setShowAiChatModal(false)}
+        device={selectedDevice}
+      />
     </div>
   );
 };
